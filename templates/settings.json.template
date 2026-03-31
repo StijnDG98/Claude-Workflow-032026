@@ -1,0 +1,125 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(.env*)",
+      "Bash(curl * | bash)",
+      "Bash(ssh *)"
+    ]
+  },
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "60"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); file=$(echo \"$input\" | grep -o '\"file_path\"[[:space:]]*:[[:space:]]*\"[^\"]*\"' | head -1 | sed 's/.*\"file_path\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/'); if echo \"$file\" | grep -qE '(\\.eslintrc|\\.eslint\\.config|eslint\\.config|tsconfig.*\\.json|\\.editorconfig)$'; then echo \"Blocked: fix the code, not the linter config.\" >&2; exit 2; fi; exit 0"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); file=$(echo \"$input\" | grep -o '\"file_path\"[[:space:]]*:[[:space:]]*\"[^\"]*\"' | head -1 | sed 's/.*\"file_path\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/'); if echo \"$file\" | grep -qE '\\.md$'; then if ! echo \"$file\" | grep -qE '(planning/|\\.claude/|CLAUDE\\.md$|MODIFICATIONS\\.md$|PROJECT_PLAN\\.md$)'; then echo \"Blocked: .md writes should go in planning/, .claude/, or be a root doc. Path: $file\" >&2; exit 2; fi; fi; exit 0"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); file=$(echo \"$input\" | grep -o '\"file_path\"[[:space:]]*:[[:space:]]*\"[^\"]*\"' | head -1 | sed 's/.*\"file_path\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/'); if echo \"$file\" | grep -qE '(workbench\\.(common|desktop|web)\\.main\\.ts)$'; then echo \"WARNING: Editing a workbench entry point. These wire all features together. Double-check imports.\" >&2; fi; exit 0"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); cmd=$(echo \"$input\" | grep -o '\"command\"[[:space:]]*:[[:space:]]*\"[^\"]*\"' | head -1 | sed 's/.*\"command\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/'); if echo \"$cmd\" | grep -q '\\-\\-no-verify'; then echo \"Blocked: --no-verify bypasses git hooks. Fix the underlying issue instead.\" >&2; exit 2; fi; exit 0"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); cmd=$(echo \"$input\" | grep -o '\"command\"[[:space:]]*:[[:space:]]*\"[^\"]*\"' | head -1 | sed 's/.*\"command\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/'); if echo \"$cmd\" | grep -qE 'git\\s+push'; then if echo \"$cmd\" | grep -qE 'git\\s+push.*\\b(main|master)\\b'; then echo \"WARNING: Pushing directly to main/master. Confirm this is intentional.\" >&2; fi; fi; exit 0"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); file=$(echo \"$input\" | grep -o '\"file_path\"[[:space:]]*:[[:space:]]*\"[^\"]*\"' | head -1 | sed 's/.*\"file_path\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/'); if [ -n \"$file\" ] && echo \"$file\" | grep -qE '\\.(ts|js|tsx|jsx)$'; then if grep -n 'console\\.log' \"$file\" 2>/dev/null | head -5; then echo \"WARNING: console.log statements detected. Remove before committing.\" >&2; fi; fi; exit 0"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{ echo '# Compaction State'; echo ''; echo \"**Date:** $(date -Iseconds 2>/dev/null || date)\"; echo \"**Branch:** $(git branch --show-current 2>/dev/null)\"; echo \"**Latest commit:** $(git log --oneline -1 2>/dev/null)\"; echo ''; echo '## Modified files'; git diff --name-only HEAD 2>/dev/null || echo 'none'; echo ''; echo '## Active plan'; find planning/ -name '*.md' -not -name 'SESSION_HANDOFF.md' -not -name 'todo.md' -newer planning/SESSION_HANDOFF.md 2>/dev/null | head -1 || echo 'none'; } > \"$CLAUDE_PROJECT_DIR/.claude/compaction-state.md\" 2>/dev/null; exit 0"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f \"$CLAUDE_PROJECT_DIR/.claude/compaction-state.md\" ]; then cat \"$CLAUDE_PROJECT_DIR/.claude/compaction-state.md\"; fi; exit 0"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "changed=$(git diff --name-only HEAD 2>/dev/null | grep -E '\\.(ts|js|tsx|jsx)$' | head -1); if [ -n \"$changed\" ]; then echo \"Reminder: Source files modified since last commit. Consider running /compile before ending.\" >&2; fi; echo 'Session ending. Consider running /handoff to capture state.' >&2; exit 0"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Evaluate whether this session produced any reusable patterns, workarounds, or architectural decisions worth capturing. If yes, suggest appending them to CLAUDE.md or a relevant planning doc. If no, just say 'No new patterns to capture.' Keep it to 2-3 sentences max."
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v powershell.exe >/dev/null 2>&1; then powershell.exe -Command \"Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.MessageBox]::Show('Claude Code needs your attention', 'Notification', 'OK', 'Information')\" 2>/dev/null; elif command -v notify-send >/dev/null 2>&1; then notify-send 'Claude Code' 'Needs your attention' 2>/dev/null; elif command -v osascript >/dev/null 2>&1; then osascript -e 'display notification \"Claude Code needs your attention\" with title \"Notification\"' 2>/dev/null; fi; exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}
