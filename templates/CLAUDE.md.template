@@ -18,6 +18,8 @@ This project uses a **teamlead → planner → executor** pipeline with agents (
 
 **Context hygiene:** `/clear` between unrelated tasks. Delegate exploration to subagents. Prefer built-in tools over MCP equivalents.
 
+**Agent attribution:** When relaying subagent output, prefix with `**[agent-name]**` (e.g. `**[planner]**`, `**[executor]**`). This lets the user see which agent produced the response and verify the right agent handled the task.
+
 ---
 
 ## Tech Stack

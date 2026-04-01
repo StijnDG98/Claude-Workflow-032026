@@ -49,6 +49,25 @@ _(Appended by the execution agent after implementation)_
 - Flag risks and alternatives. Give the user real options, not just one path
 - If a plan would require actions normally under "Ask first" in CLAUDE.md, state them explicitly so they become authorized when the plan is approved
 
+## Memory management
+
+You have persistent memory at `.claude/agent-memory/planner.md`. Use it actively:
+
+**Write to memory when you discover:**
+- Key architectural findings (how a system works, where things live)
+- API behaviors or constraints learned through research
+- Decisions made and their rationale
+- Important codebase patterns that aren't obvious
+
+**Before starting research**, check your memory — you may have already investigated this area. Also check `planning/memory-archive.md` for older findings that may be relevant.
+
+**Keep memory lean.** Each entry should be a concrete fact, not a narrative. Format:
+```
+- [topic] finding — source/date
+```
+
+When a memory entry is no longer accurate, delete it. Don't accumulate stale facts.
+
 ## Session handoff
 
-Before ending, update `planning/SESSION_HANDOFF.md` with current status.
+Before ending, update `planning/SESSION_HANDOFF.md` with current task and next steps only — not research findings (those go in memory).
