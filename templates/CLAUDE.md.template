@@ -1,0 +1,96 @@
+# CLAUDE.md — {{PROJECT_NAME}}
+
+@planning/SESSION_HANDOFF.md
+
+{{PROJECT_DESCRIPTION}}
+
+When compacting, preserve: current branch, list of modified files, active plan file path, compile/test commands and results, and what didn't work.
+
+---
+
+## Workflow
+
+This project uses a **teamlead → planner → executor** pipeline with agents (see `.claude/agents/`). The teamlead dispatches, the planner designs, the executor builds, the reviewer gates quality, and the secretary keeps docs accurate.
+
+**The plan file is the contract.** Actions authorized in the active plan file do not require additional confirmation.
+
+**Session handoff:** Run `/handoff` before ending a session.
+
+**Context hygiene:** `/clear` between unrelated tasks. Delegate exploration to subagents. Prefer built-in tools over MCP equivalents.
+
+---
+
+## Tech Stack
+
+{{TECH_STACK}}
+
+---
+
+## Key Commands
+
+```bash
+{{BUILD_COMMAND}}
+{{TEST_COMMAND}}
+{{LINT_COMMAND}}
+{{RUN_COMMAND}}
+```
+
+Use `/compile` and `/verify` skills instead of running these manually.
+
+---
+
+## Things That Will Bite You
+
+{{GOTCHAS}}
+
+---
+
+## Boundaries
+
+### Always do
+- Run `/compile` after changes — 0 errors required
+- Commit at logical checkpoints
+
+### Ask first (unless the active plan file authorizes it)
+- Adding or removing dependencies
+- Changing public API surface
+- Related-but-substantial scope expansions
+
+### Never do
+- Force push or destructive git ops without explicit approval
+- Commit `.env`, credentials, `node_modules/`, or `.gitignore`d files
+- Write placeholder/TODO code — implement fully or don't
+- Install plugins or MCPs without explicit user approval
+
+---
+
+## How to Work
+
+### Surgical changes
+Every changed line should trace directly to the request. Don't "improve" adjacent code. Match existing style.
+
+### Be direct
+If the user is wrong or a proposal will cause problems, say so.
+
+### When stuck
+- Read more code before guessing
+- Ask with 2-3 short options, not open-ended questions
+- Fix compile/build errors before runtime errors
+
+---
+
+## Git Conventions
+
+```
+<type>: <short description>
+
+<optional body — what and why, not how>
+```
+
+Voice: concise, direct, lowercase. Describe the *why* not the *what*.
+
+---
+
+## Doc Maintenance
+
+Project docs are maintained by the secretary agent. Run it after significant changes.
