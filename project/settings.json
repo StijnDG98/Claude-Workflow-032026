@@ -30,15 +30,6 @@
         ]
       },
       {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "input=$(cat); file=$(echo \"$input\" | grep -o '\"file_path\"[[:space:]]*:[[:space:]]*\"[^\"]*\"' | head -1 | sed 's/.*\"file_path\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/'); if echo \"$file\" | grep -qE '(workbench\\.(common|desktop|web)\\.main\\.ts)$'; then echo \"WARNING: Editing a workbench entry point. These wire all features together. Double-check imports.\" >&2; fi; exit 0"
-          }
-        ]
-      },
-      {
         "matcher": "Bash",
         "hooks": [
           {
@@ -74,7 +65,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "{ echo '# Compaction State'; echo ''; echo \"**Date:** $(date -Iseconds 2>/dev/null || date)\"; echo \"**Branch:** $(git branch --show-current 2>/dev/null)\"; echo \"**Latest commit:** $(git log --oneline -1 2>/dev/null)\"; echo ''; echo '## Modified files'; git diff --name-only HEAD 2>/dev/null || echo 'none'; echo ''; echo '## Active plan'; find planning/ -name '*.md' -not -name 'SESSION_HANDOFF.md' -not -name 'todo.md' -newer planning/SESSION_HANDOFF.md 2>/dev/null | head -1 || echo 'none'; } > \"$CLAUDE_PROJECT_DIR/.claude/compaction-state.md\" 2>/dev/null; exit 0"
+            "command": "echo \"--- Pre-compaction snapshot ---\"; echo \"Branch: $(git branch --show-current 2>/dev/null)\"; echo \"Commit: $(git log --oneline -1 2>/dev/null)\"; echo \"Modified:\"; git diff --name-only HEAD 2>/dev/null | head -15 || echo '  none'; exit 0"
+          },
+          {
+            "type": "prompt",
+            "prompt": "Context compaction is about to happen. Before it does, use the secretary agent to: (1) Write any important research findings or facts from this session to the relevant agent's memory file (.claude/agent-memory/<agent>.md), (2) Update planning/SESSION_HANDOFF.md with current task state and next steps only — keep it lean, no knowledge dumps. SESSION_HANDOFF.md is @-imported in CLAUDE.md so it survives compaction. Agent memory files persist on disk. Together they ensure nothing important is lost."
           }
         ]
       }
@@ -85,7 +80,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -f \"$CLAUDE_PROJECT_DIR/.claude/compaction-state.md\" ]; then cat \"$CLAUDE_PROJECT_DIR/.claude/compaction-state.md\"; fi; exit 0"
+            "command": "echo 'Session resumed after compaction. SESSION_HANDOFF.md is already loaded via @ import. Check agent memory files in .claude/agent-memory/ for domain-specific context if needed.'; exit 0"
           }
         ]
       }
@@ -97,15 +92,10 @@
           {
             "type": "command",
             "command": "changed=$(git diff --name-only HEAD 2>/dev/null | grep -E '\\.(ts|js|tsx|jsx)$' | head -1); if [ -n \"$changed\" ]; then echo \"Reminder: Source files modified since last commit. Consider running /compile before ending.\" >&2; fi; echo 'Session ending. Consider running /handoff to capture state.' >&2; exit 0"
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
+          },
           {
             "type": "prompt",
-            "prompt": "Evaluate whether this session produced any reusable patterns, workarounds, or architectural decisions worth capturing. If yes, suggest appending them to CLAUDE.md or a relevant planning doc. If no, just say 'No new patterns to capture.' Keep it to 2-3 sentences max."
+            "prompt": "Evaluate whether this session produced any reusable RULES (not facts). A rule is 'when X happens, do Y' — a pattern that should become a permanent instruction. If yes, suggest adding it to CLAUDE.md or the relevant agent prompt. Facts and research findings should already be in agent memory — do not repeat them here. If no new rules, say so briefly."
           }
         ]
       }

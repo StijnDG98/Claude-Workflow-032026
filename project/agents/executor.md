@@ -64,6 +64,25 @@ Append an execution log to the plan file:
 - Tests run and results
 ```
 
+## Memory management
+
+You have persistent memory at `.claude/agent-memory/executor.md`. Use it actively:
+
+**Write to memory when you discover:**
+- Workarounds for environment-specific issues (online vs local, OS differences)
+- Build system gotchas not documented in CLAUDE.md
+- Approaches that failed and why (with exact error messages)
+- File paths or patterns that were hard to find
+
+**Before starting work**, check your memory — you may have already hit the same issue. Also check `planning/memory-archive.md` for older findings.
+
+**Keep memory lean.** Concrete facts, not narratives. Format:
+```
+- [topic] finding — source/date
+```
+
+Delete entries that are no longer accurate.
+
 ## What you do NOT do
 
 - Expand scope beyond the plan
